@@ -50,30 +50,42 @@ app.post('/scan', scanMiddleware, async (req, res) => {
         let riskData = null;
         let isToken = false;
 
-        // 1. Try Token Security API first
-        try {
-            const tokenRes = await axios.get(`https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${address}`);
-            if (tokenRes.data && tokenRes.data.result && Object.keys(tokenRes.data.result).length > 0) {
-                // Key is usually the lowercased address
-                const addrKey = address.toLowerCase();
-                if (tokenRes.data.result[addrKey]) {
-                    riskData = tokenRes.data.result[addrKey];
+        // 1a. Solana — uses a separate GoPlus endpoint
+        if (chainId === 'solana') {
+            try {
+                const solRes = await axios.get(`https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${address}`);
+                if (solRes.data && solRes.data.result && Object.keys(solRes.data.result).length > 0) {
+                    riskData = solRes.data.result[address] || Object.values(solRes.data.result)[0];
                     isToken = true;
                 }
+            } catch (error) {
+                console.error('Error fetching Solana token security:', error.message);
             }
-        } catch (error) {
-            console.error('Error fetching token security:', error.message);
-        }
-
-        // 2. If no token data found, fall back to Address Security API
-        if (!riskData) {
+        } else {
+            // 1b. EVM — try Token Security API first
             try {
-                const addressRes = await axios.get(`https://api.gopluslabs.io/api/v1/address_security/${address}?chain_id=${chainId}`);
-                if (addressRes.data && addressRes.data.result) {
-                    riskData = addressRes.data.result;
+                const tokenRes = await axios.get(`https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${address}`);
+                if (tokenRes.data && tokenRes.data.result && Object.keys(tokenRes.data.result).length > 0) {
+                    const addrKey = address.toLowerCase();
+                    if (tokenRes.data.result[addrKey]) {
+                        riskData = tokenRes.data.result[addrKey];
+                        isToken = true;
+                    }
                 }
             } catch (error) {
-                console.error('Error fetching address security:', error.message);
+                console.error('Error fetching token security:', error.message);
+            }
+
+            // 1c. EVM fallback — Address Security API
+            if (!riskData) {
+                try {
+                    const addressRes = await axios.get(`https://api.gopluslabs.io/api/v1/address_security/${address}?chain_id=${chainId}`);
+                    if (addressRes.data && addressRes.data.result) {
+                        riskData = addressRes.data.result;
+                    }
+                } catch (error) {
+                    console.error('Error fetching address security:', error.message);
+                }
             }
         }
 
