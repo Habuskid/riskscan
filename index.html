@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="RiskScan - Paste a crypto address or token before you interact with it. Get a security verdict in seconds.">
+    <title>RiskScan | Crypto Security Copilot</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-glow: rgba(59, 130, 246, 0.5);
+            
+            --score-low: #10b981;
+            --score-medium: #f59e0b;
+            --score-high: #f97316;
+            --score-critical: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            background-image: radial-gradient(circle at 50% 0%, #1e3a8a 0%, transparent 50%);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            z-index: 10;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--border-glow);
+        }
+
+        select {
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(15, 23, 42, 0.6);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-text.loading {
+            display: none;
+        }
+        
+        .loader.loading {
+            display: block;
+        }
+
+        /* Results Area */
+        #result-area {
+            margin-top: 2rem;
+            display: none;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            border-radius: 9999px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .score-Low { background: rgba(16, 185, 129, 0.2); color: var(--score-low); border: 1px solid var(--score-low); }
+        .score-Medium { background: rgba(245, 158, 11, 0.2); color: var(--score-medium); border: 1px solid var(--score-medium); }
+        .score-High { background: rgba(249, 115, 22, 0.2); color: var(--score-high); border: 1px solid var(--score-high); }
+        .score-Critical { background: rgba(239, 68, 68, 0.2); color: var(--score-critical); border: 1px solid var(--score-critical); }
+
+        .result-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .result-section h3 {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-section p {
+            line-height: 1.6;
+            font-size: 1.05rem;
+        }
+
+        .recommendation {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .error-message {
+            color: var(--score-critical);
+            background: rgba(239, 68, 68, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+    </style>
+    <!-- Use Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>RiskScan</h1>
+            <p class="subtitle">AI-powered smart contract & wallet security</p>
+        </header>
+
+        <div class="glass-card">
+            <div class="input-group">
+                <input type="text" id="address" placeholder="Paste 0x address here..." autocomplete="off">
+                <select id="chainId">
+                    <option value="1">Ethereum</option>
+                    <option value="56">BSC</option>
+                    <option value="8453">Base</option>
+                    <option value="42161">Arbitrum</option>
+                </select>
+            </div>
+            <button id="scanBtn">
+                <span class="btn-text">Scan Address</span>
+                <div class="loader"></div>
+            </button>
+            <div id="errorBox" class="error-message"></div>
+        </div>
+
+        <div id="result-area" class="glass-card" style="margin-top: 20px;">
+            <div id="scoreBadge" class="score-badge"></div>
+            
+            <div class="result-section">
+                <h3>Explanation</h3>
+                <p id="explanationText"></p>
+            </div>
+            
+            <div class="result-section">
+                <h3>Recommendation</h3>
+                <p id="recommendationText" class="recommendation"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const scanBtn = document.getElementById('scanBtn');
+        const btnText = document.querySelector('.btn-text');
+        const loader = document.querySelector('.loader');
+        const errorBox = document.getElementById('errorBox');
+        const resultArea = document.getElementById('result-area');
+        
+        const scoreBadge = document.getElementById('scoreBadge');
+        const explanationText = document.getElementById('explanationText');
+        const recommendationText = document.getElementById('recommendationText');
+
+        scanBtn.addEventListener('click', async () => {
+            const address = document.getElementById('address').value.trim();
+            const chainId = document.getElementById('chainId').value;
+
+            if (!address || !address.startsWith('0x') || address.length !== 42) {
+                showError("Please enter a valid EVM address (e.g. 0x...).");
+                return;
+            }
+
+            // UI Loading state
+            scanBtn.disabled = true;
+            btnText.classList.add('loading');
+            loader.classList.add('loading');
+            errorBox.style.display = 'none';
+            resultArea.style.display = 'none';
+
+            try {
+                // Pointing to local backend. If hosted, change to full URL.
+                const response = await fetch('http://localhost:3000/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address, chainId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to scan address.");
+                }
+
+                displayResult(data.verdict);
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                // UI Reset state
+                scanBtn.disabled = false;
+                btnText.classList.remove('loading');
+                loader.classList.remove('loading');
+            }
+        });
+
+        function displayResult(verdict) {
+            const score = verdict.riskScore; // Low, Medium, High, Critical
+            
+            // Clean classes
+            scoreBadge.className = 'score-badge';
+            scoreBadge.classList.add(`score-${score}`);
+            scoreBadge.textContent = `${score} RISK`;
+
+            explanationText.textContent = verdict.explanation;
+            recommendationText.textContent = verdict.recommendation;
+            
+            // Set specific colors for recommendation based on risk
+            if (score === 'Low') recommendationText.style.color = 'var(--score-low)';
+            else if (score === 'Medium') recommendationText.style.color = 'var(--score-medium)';
+            else if (score === 'High') recommendationText.style.color = 'var(--score-high)';
+            else if (score === 'Critical') recommendationText.style.color = 'var(--score-critical)';
+
+            resultArea.style.display = 'block';
+        }
+
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
